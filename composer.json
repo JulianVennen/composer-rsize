@@ -1,0 +1,27 @@
+{
+    "name": "julian/composer-rsize",
+    "description": "A composer plugin to show the recursive size of your dependencies",
+    "license": "MIT",
+    "type": "composer-plugin",
+    "authors": [
+        {
+            "name": "Julian Vennen",
+            "email": "julian@vennen.me"
+        }
+    ],
+    "require": {
+        "php": "^7.2 || ^8.0",
+        "composer-plugin-api": "^2.0"
+    },
+    "require-dev": {
+        "composer/composer": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Julian\\ComposerRsize\\": "src/"
+        }
+    },
+    "extra": {
+        "class": "Julian\\ComposerRsize\\Plugin"
+    }
+}
