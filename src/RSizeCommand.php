@@ -18,13 +18,17 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class RSizeCommand extends BaseCommand
 {
+    const FORMAT_PLAIN = 'text';
+    const FORMAT_JSON = 'json';
+
     protected function configure()
     {
         $this->setName('rsize')
             ->setDescription('Show the recursive size of your dependencies')
             ->setDefinition([
                 new InputArgument('package', InputArgument::OPTIONAL, 'The package to inspect', null, $this->suggestPackage()),
-                new InputOption('format', null, InputOption::VALUE_REQUIRED, 'Format of the output: text or json', 'text', ['json', 'text']),
+                new InputOption('format', null, InputOption::VALUE_REQUIRED, 'Format of the output: text or json',
+                    static::FORMAT_PLAIN, [static::FORMAT_PLAIN, static::FORMAT_JSON]),
                 new InputOption('dev', null, InputOption::VALUE_NONE, 'Include dev dependencies.'),
             ])
             ->setHelp(
@@ -50,6 +54,13 @@ EOT
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $io = $this->getIO();
+        $format = $input->getOption('format');
+        if (!in_array($format, [static::FORMAT_PLAIN, static::FORMAT_JSON])) {
+            $io->writeError('<error>Invalid format. Allowed values: text, json</error>');
+            return static::FAILURE;
+        }
+
         $packages = $this->getDirectDependencies(
             $input->getArgument('package'),
             $input->getOption('dev')
@@ -65,9 +76,9 @@ EOT
             return $b->getTotalSize() <=> $a->getTotalSize();
         });
 
-        if ($input->getOption('format') === 'json') {
-            $output->write(JsonFile::encode($result));
-            return self::SUCCESS;
+        if ($format === static::FORMAT_JSON) {
+            $io->write(JsonFile::encode($result));
+            return static::SUCCESS;
         }
 
         $table = new Table($output);
@@ -78,7 +89,7 @@ EOT
         }, $result));
         $table->render();
 
-        return self::SUCCESS;
+        return static::SUCCESS;
     }
 
     /**
