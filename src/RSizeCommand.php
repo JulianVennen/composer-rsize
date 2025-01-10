@@ -1,6 +1,6 @@
 <?php
 
-namespace Julian\ComposerRsize;
+namespace JulianVe\ComposerRSize;
 
 use Closure;
 use Composer\Command\BaseCommand;

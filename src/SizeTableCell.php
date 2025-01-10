@@ -1,6 +1,6 @@
 <?php
 
-namespace Julian\ComposerRsize;
+namespace JulianVe\ComposerRSize;
 
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableCellStyle;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Julian\ComposerRsize;
+namespace JulianVe\ComposerRSize;
 
 use Composer\Package\Package;
 
@@ -52,11 +52,6 @@ class PackageSize implements \JsonSerializable
     public function getAddedSize(): int
     {
         return $this->addedSize;
-    }
-
-    public function format(): string
-    {
-        return sprintf('%s: %s', $this->package->getName(), $this->getPrettySize());
     }
 
     public function toRow(): array
