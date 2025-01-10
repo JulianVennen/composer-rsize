@@ -3,11 +3,8 @@
 namespace Julian\ComposerRsize;
 
 use Composer\Package\Package;
-use Symfony\Component\Console\Helper\TableCell;
-use Symfony\Component\Console\Helper\TableCellStyle;
-use Symfony\Component\Console\Helper\TableStyle;
 
-class PackageSize
+class PackageSize implements \JsonSerializable
 {
     /**
      * @var Package
@@ -35,6 +32,13 @@ class PackageSize
         $this->addedSize = $addedSize;
     }
 
+    public static function formatSize(int $size): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        $factor = floor((strlen($size) - 1) / 3);
+        return sprintf("%.2f %s", $size / (1024 ** $factor), $units[$factor]);
+    }
+
     public function getPackage(): Package
     {
         return $this->package;
@@ -50,13 +54,6 @@ class PackageSize
         return $this->addedSize;
     }
 
-    public function formatSize(int $size): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        $factor = floor((strlen($size) - 1) / 3);
-        return sprintf("%.2f %s", $size / (1024 ** $factor), $units[$factor]);
-    }
-
     public function format(): string
     {
         return sprintf('%s: %s', $this->package->getName(), $this->getPrettySize());
@@ -68,6 +65,15 @@ class PackageSize
             $this->package->getName(),
             new SizeTableCell($this->formatSize($this->totalSize)),
             new SizeTableCell($this->formatSize($this->addedSize)),
+        ];
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'name' => $this->package->getName(),
+            'totalSize' => $this->totalSize,
+            'addedSize' => $this->addedSize,
         ];
     }
 }

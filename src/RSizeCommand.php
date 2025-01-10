@@ -6,6 +6,7 @@ use Closure;
 use Composer\Command\BaseCommand;
 use Composer\Console\Input\InputArgument;
 use Composer\Console\Input\InputOption;
+use Composer\Json\JsonFile;
 use Composer\Package\Package;
 use Composer\Repository\InstalledRepositoryInterface;
 use RecursiveDirectoryIterator;
@@ -35,9 +36,6 @@ The <info>rsize</info> command shows the recursive size of your dependencies.
 Read more at https://getcomposer.org/doc/03-cli.md#archive
 EOT
             );
-        // TODO: show size of a specific package
-        // TODO: show total size
-        // TODO: json output
     }
 
     protected function suggestPackage(): Closure
@@ -59,16 +57,22 @@ EOT
 
         $result = [];
         foreach ($packages as $package) {
-            $result[] = $this->calculateSize($package, $package, $packages);
+            $size = $this->calculateSize($package, $package, $packages);
+            $result[] = $size;
         }
 
-        uasort($result, function (PackageSize $a, PackageSize $b) {
+        usort($result, function (PackageSize $a, PackageSize $b) {
             return $b->getTotalSize() <=> $a->getTotalSize();
         });
 
+        if ($input->getOption('format') === 'json') {
+            $output->write(JsonFile::encode($result));
+            return self::SUCCESS;
+        }
+
         $table = new Table($output);
         $table->setColumnWidths([30, 10, 10]);
-        $table->setHeaders(['Package', 'Size', 'Diff']);
+        $table->setHeaders(['Package', 'Total Size', 'Added Size']);
         $table->setRows(array_map(function (PackageSize $packageSize) {
             return $packageSize->toRow();
         }, $result));
