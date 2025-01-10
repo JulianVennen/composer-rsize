@@ -7,7 +7,7 @@ use Composer\Command\BaseCommand;
 use Composer\Console\Input\InputArgument;
 use Composer\Console\Input\InputOption;
 use Composer\Json\JsonFile;
-use Composer\Package\Package;
+use Composer\Package\PackageInterface;
 use Composer\Repository\InstalledRepositoryInterface;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -94,7 +94,7 @@ EOT
 
     /**
      * @param string|null $packageName The package to inspect
-     * @return Package[]
+     * @return PackageInterface[]
      */
     protected function getDirectDependencies(?string $packageName, ?bool $includeDev = false): array
     {
@@ -122,12 +122,12 @@ EOT
     }
 
     /**
-     * @param Package $package
-     * @param Package $root
-     * @param Package[] $directDependencies
+     * @param PackageInterface $package
+     * @param PackageInterface $root
+     * @param PackageInterface[] $directDependencies
      * @return PackageSize
      */
-    protected function calculateSize(Package $package, Package $root, array $directDependencies): PackageSize
+    protected function calculateSize(PackageInterface $package, PackageInterface $root, array $directDependencies): PackageSize
     {
         $vendor = $this->requireComposer()->getConfig()->get('vendor-dir');
         $totalSize = $this->recursiveFileSize($vendor . "/" . $package->getName());
@@ -170,9 +170,9 @@ EOT
         return $this->requireComposer()->getRepositoryManager()->getLocalRepository();
     }
 
-    protected function isTransitiveDependency(Package $dependency, Package $package): bool
+    protected function isTransitiveDependency(PackageInterface $dependency, PackageInterface $package): bool
     {
-        if ($dependency === $package) {
+        if ($dependency->getName() === $package->getName()) {
             return true;
         }
 

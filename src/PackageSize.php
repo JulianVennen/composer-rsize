@@ -2,12 +2,12 @@
 
 namespace JulianVe\ComposerRSize;
 
-use Composer\Package\Package;
+use Composer\Package\PackageInterface;
 
 class PackageSize implements \JsonSerializable
 {
     /**
-     * @var Package
+     * @var PackageInterface
      */
     protected $package;
 
@@ -22,9 +22,9 @@ class PackageSize implements \JsonSerializable
     protected $addedSize;
 
     public function __construct(
-        Package $package,
-        int     $size,
-        int     $addedSize
+        PackageInterface $package,
+        int              $size,
+        int              $addedSize
     )
     {
         $this->package = $package;
@@ -39,7 +39,7 @@ class PackageSize implements \JsonSerializable
         return sprintf("%.2f %s", $size / (1024 ** $factor), $units[$factor]);
     }
 
-    public function getPackage(): Package
+    public function getPackage(): PackageInterface
     {
         return $this->package;
     }
