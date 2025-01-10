@@ -4,15 +4,14 @@ namespace Julian\ComposerRsize;
 
 use Closure;
 use Composer\Command\BaseCommand;
-use Composer\Composer;
 use Composer\Console\Input\InputArgument;
 use Composer\Console\Input\InputOption;
 use Composer\Package\Package;
 use Composer\Repository\InstalledRepositoryInterface;
-use Composer\Repository\RootPackageRepository;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\Console\Completion\CompletionInput;
 use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -23,7 +22,7 @@ class RSizeCommand extends BaseCommand
         $this->setName('rsize')
             ->setDescription('Show the recursive size of your dependencies')
             ->setDefinition([
-                new InputArgument('package', InputArgument::OPTIONAL, 'The root package to show the size of', null, $this->suggestPackage()),
+                new InputArgument('package', InputArgument::OPTIONAL, 'The package to inspect', null, $this->suggestPackage()),
                 new InputOption('format', null, InputOption::VALUE_REQUIRED, 'Format of the output: text or json', 'text', ['json', 'text']),
                 new InputOption('dev', null, InputOption::VALUE_NONE, 'Include dev dependencies.'),
             ])
@@ -36,11 +35,8 @@ The <info>rsize</info> command shows the recursive size of your dependencies.
 Read more at https://getcomposer.org/doc/03-cli.md#archive
 EOT
             );
-        // TODO: show size
         // TODO: show size of a specific package
-        // TODO: show only diff size
         // TODO: show total size
-        // TODO: ignore dev dependencies
         // TODO: json output
     }
 
@@ -63,11 +59,11 @@ EOT
 
         $result = [];
         foreach ($packages as $package) {
-            $result[] = $this->calculateSize($package);
+            $result[] = $this->calculateSize($package, $package, $packages);
         }
 
         uasort($result, function (PackageSize $a, PackageSize $b) {
-            return $b->getSize() <=> $a->getSize();
+            return $b->getTotalSize() <=> $a->getTotalSize();
         });
 
         $table = new Table($output);
@@ -82,21 +78,21 @@ EOT
     }
 
     /**
-     * @param string|null $packageName The root package to inspect
+     * @param string|null $packageName The package to inspect
      * @return Package[]
      */
     protected function getDirectDependencies(?string $packageName, ?bool $includeDev = false): array
     {
         $composer = $this->requireComposer();
 
-        $root = $composer->getPackage();
+        $package = $composer->getPackage();
         if ($packageName) {
-            $root = $this->getRepository()->findPackage($packageName, '*');
+            $package = $this->getRepository()->findPackage($packageName, '*');
         }
 
-        $requires = $root->getRequires();
+        $requires = $package->getRequires();
         if ($includeDev) {
-            $requires = array_merge($requires, $root->getDevRequires());
+            $requires = array_merge($requires, $package->getDevRequires());
         }
 
         $packages = [];
@@ -110,19 +106,36 @@ EOT
         return $packages;
     }
 
-    protected function calculateSize(Package $package): PackageSize
+    /**
+     * @param Package $package
+     * @param Package $root
+     * @param Package[] $directDependencies
+     * @return PackageSize
+     */
+    protected function calculateSize(Package $package, Package $root, array $directDependencies): PackageSize
     {
         $vendor = $this->requireComposer()->getConfig()->get('vendor-dir');
-        $size = $this->recursiveFileSize($vendor . "/" . $package->getName());
+        $totalSize = $this->recursiveFileSize($vendor . "/" . $package->getName());
+        $addedSize = $totalSize;
 
         foreach ($this->getDirectDependencies($package->getName()) as $dependency) {
-            $size += $this->calculateSize($dependency)->getSize();
+            $dependencySize = $this->calculateSize($dependency, $root, $directDependencies)->getTotalSize();
+            $totalSize += $dependencySize;
+            foreach ($directDependencies as $directDependency) {
+                if ($root === $directDependency) {
+                    continue;
+                }
+                if ($this->isTransitiveDependency($dependency, $directDependency)) {
+                    continue 2;
+                }
+            }
+            $addedSize += $dependencySize;
         }
-        // TODO: diff size
 
         return new PackageSize(
             $package,
-            $size
+            $totalSize,
+            $addedSize
         );
     }
 
@@ -130,7 +143,7 @@ EOT
     {
         $size = 0;
 
-        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory)) as $file) {
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory)) as $file) {
             $size += $file->getSize();
         }
 
@@ -140,5 +153,20 @@ EOT
     protected function getRepository(): InstalledRepositoryInterface
     {
         return $this->requireComposer()->getRepositoryManager()->getLocalRepository();
+    }
+
+    protected function isTransitiveDependency(Package $dependency, Package $package): bool
+    {
+        if ($dependency === $package) {
+            return true;
+        }
+
+        foreach ($package->getRequires() as $require) {
+            if ($require->getTarget() === $dependency->getName()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -17,15 +17,22 @@ class PackageSize
     /**
      * @var int
      */
-    protected $size;
+    protected $totalSize;
+
+    /**
+     * @var int
+     */
+    protected $addedSize;
 
     public function __construct(
         Package $package,
-        int     $size
+        int     $size,
+        int     $addedSize
     )
     {
-        $this->size = $size;
         $this->package = $package;
+        $this->totalSize = $size;
+        $this->addedSize = $addedSize;
     }
 
     public function getPackage(): Package
@@ -33,16 +40,21 @@ class PackageSize
         return $this->package;
     }
 
-    public function getSize(): int
+    public function getTotalSize(): int
     {
-        return $this->size;
+        return $this->totalSize;
     }
 
-    public function getPrettySize(): string
+    public function getAddedSize(): int
+    {
+        return $this->addedSize;
+    }
+
+    public function formatSize(int $size): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        $factor = floor((strlen($this->size) - 1) / 3);
-        return sprintf("%.2f %s", $this->size / (1024 ** $factor), $units[$factor]);
+        $factor = floor((strlen($size) - 1) / 3);
+        return sprintf("%.2f %s", $size / (1024 ** $factor), $units[$factor]);
     }
 
     public function format(): string
@@ -54,7 +66,8 @@ class PackageSize
     {
         return [
             $this->package->getName(),
-            new SizeTableCell($this->getPrettySize()),
+            new SizeTableCell($this->formatSize($this->totalSize)),
+            new SizeTableCell($this->formatSize($this->addedSize)),
         ];
     }
 }
